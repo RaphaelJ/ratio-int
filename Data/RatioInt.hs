@@ -1,11 +1,16 @@
 {-# LANGUAGE BangPatterns #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 -- | Provides a specialised version of 'Data.Ratio' for 'Int'.
 --
 -- Runs about ten times faster than 'Data.Ratio' while being half as fast as
 -- floating-point types.
 module Data.RatioInt (RatioInt (numerator, denominator), (%)) where
 
+import Control.Applicative ((<$>), (<*>))
 import qualified Data.Ratio as R
+import Foreign.Ptr (castPtr, plusPtr)
+import Foreign.Storable (Storable (..))
 
 -- | Rational numbers, with numerator and denominator of the 'Int' type.
 data RatioInt = RatioInt {
@@ -76,3 +81,19 @@ instance Enum RatioInt where
         mid = (m - n) / 2
         predicate | m >= n    = (<= p + mid)
                   | otherwise = (>= p + mid)
+
+instance Storable RatioInt where
+    sizeOf _ = let !sizeOfInt = sizeOf (undefined :: Int)
+               in sizeOfInt + sizeOfInt
+    {-# INLINE sizeOf #-}
+
+    alignment _ = alignment (undefined :: Int)
+    {-# INLINE alignment #-}
+
+    peek !ptr = let !ptr' = castPtr ptr
+                in RatioInt <$> peek ptr' <*> peek (ptr' `plusPtr` 1)
+    {-# INLINE peek #-}
+
+    poke !ptr !(RatioInt x y) = let !ptr' = castPtr ptr
+                                in poke ptr' x >> poke (ptr' `plusPtr` 1) y
+    {-# INLINE poke #-}
