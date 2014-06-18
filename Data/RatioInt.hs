@@ -83,17 +83,21 @@ instance Enum RatioInt where
                   | otherwise = (>= p + mid)
 
 instance Storable RatioInt where
-    sizeOf _ = let !sizeOfInt = sizeOf (undefined :: Int)
-               in sizeOfInt + sizeOfInt
+    sizeOf _ = sizeOfInt + sizeOfInt
     {-# INLINE sizeOf #-}
 
     alignment _ = alignment (undefined :: Int)
     {-# INLINE alignment #-}
 
     peek !ptr = let !ptr' = castPtr ptr
-                in RatioInt <$> peek ptr' <*> peek (ptr' `plusPtr` 1)
+                in RatioInt <$> peek ptr'
+                            <*> peek (ptr' `plusPtr` sizeOfInt)
     {-# INLINE peek #-}
 
     poke !ptr !(RatioInt x y) = let !ptr' = castPtr ptr
-                                in poke ptr' x >> poke (ptr' `plusPtr` 1) y
+                                in poke ptr' x >>
+                                   poke (ptr' `plusPtr` sizeOfInt) y
     {-# INLINE poke #-}
+
+sizeOfInt :: Int
+sizeOfInt = sizeOf (undefined :: Int)
